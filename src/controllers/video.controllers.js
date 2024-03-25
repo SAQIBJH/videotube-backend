@@ -230,9 +230,7 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
     if (!isValidObjectId(videoId)) throw new ApiError(400, "Invalid Video Id")
     
 
-    
-
-    const video = await Video.findById(videoId, {_id : 1, published: 1, owner: 1});
+    const video = await Video.findById(videoId, {_id : 1, isPublished: 1, owner: 1});
     if (!video) throw new ApiError(404, "No Video Found")
 
     if(video?.owner?.toString() !== req.user?._id?.toString()) throw new ApiError(401, "Unauthorized Request")
@@ -242,7 +240,7 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
         videoId,
         {
             $set: {
-                published: !video?.published
+                isPublished: !video?.isPublished
             }
         },
         {
@@ -255,7 +253,7 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
         .json(new ApiResponse(
             201,
             toggleVideo,
-            toggleVideo?.published ? "Video Published Successfully" : "Video Unpublished Successfully"
+            toggleVideo?.isPublished ? "Video Published Successfully" : "Video Unpublished Successfully"
     ))
 })
 
