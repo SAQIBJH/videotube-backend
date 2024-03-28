@@ -5,15 +5,19 @@ import { deleteVideo, getAllVideos, getVideoById, publishAVideo, togglePublishSt
 
 const router = Router();
 router.use(verifyJWT); // every routes will be protected
-router.route("/").get(getAllVideos).post(upload.fields([
-    {
-        name: "videoFile",
-        maxCount:1
-    }, {
-        name: "thumbnail",
-        maxCount:1
-    }
-]), publishAVideo)
+router.route("/")
+    .get(getAllVideos)
+    .post(upload.fields([
+        {
+            name: "videoFile",
+            maxCount:1
+        }, {
+            name: "thumbnail",
+            maxCount:1
+        }
+    ]),
+        publishAVideo
+    )
 
 router.route("/:videoId")
     .get(getVideoById)

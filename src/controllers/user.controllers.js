@@ -391,8 +391,8 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
                 isSubscribe: 1,
                 subscriberCount: 1,
                 channelsSubscribedToCount: 1,
-                avatar: 1,
-                coverImage: 1
+                avatar: "$avatar.url",
+                coverImage: "$coverImage.url"
 
             }
         }
@@ -408,7 +408,8 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
 
 
 const getUserWatchHistory = asyncHandler(async (req, res) => {
-    const user = await User.aggregate([
+    const user = await User.aggregate(
+        [
         {
             $match:
             {
@@ -435,7 +436,7 @@ const getUserWatchHistory = asyncHandler(async (req, res) => {
                                 {
                                     $project: {
                                         fullName: 1,
-                                        avatar: 1,
+                                        avatar: "$avatar.url",
                                         username: 1,
                                     }
                                 }
@@ -458,8 +459,9 @@ const getUserWatchHistory = asyncHandler(async (req, res) => {
             }
         },
        
-    ])
-    console.log("userwatch ::", user[0].watchHistory)
+        ]
+    )
+    console.log("userwatch :: ", user[0].watchHistory)
     return res
         .status(200)
         .json(new ApiResponse(200, user[0].watchHistory, "success"))
