@@ -5,6 +5,7 @@ import { asyncHandler } from "../utils/AsyncHandler.js";
 import { deleteOnCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js";
 import mongoose, { isValidObjectId } from "mongoose";
 import { User } from "../models/user.model.js";
+import { Comment } from "../models/comment.model.js";
 
 
 const getAllVideos = asyncHandler(async (req, res) => {
@@ -74,7 +75,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
         )
     } catch (error) {
         console.error("Error in aggregation:", error);
-        res.status(500).json(new ApiResponse(500, error.message || "Internal server error"));
+        throw new ApiError(500, error.message || "Internal server error in video aggregation");
     }
 
 
@@ -109,7 +110,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
                 )
         }).catch(error => {
             console.log("error ::", error)
-            throw new ApiError(500, error?.message || "Internal server error")
+            throw new ApiError(500, error?.message || "Internal server error in video aggregate Paginate")
         })
 
 
@@ -118,44 +119,83 @@ const getAllVideos = asyncHandler(async (req, res) => {
 })
 
 
-
-
 const getVideoById = asyncHandler(async (req, res) => {
     const { videoId } = req.params;
     if (!isValidObjectId(videoId)) throw new ApiError(404, "Video not found");
 
+    const findVideo = await Video.findById(videoId);
+    if (!findVideo) throw new ApiError(404, "Video not found");
 
-    const user = await User.findById(req.user?._id);
+    const user = await User.findById(req.user?._id, { watchHistory : 1 } );
     if (!user) throw new ApiError(404, "User not found");
 
-    // Check if the user has already watched the video
-    if (!user.watchHistory.includes(videoId)) {
-        // Increment the view count only if the user hasn't watched the video before
+    // increment count based on watchHistory
+      if (!user?.watchHistory.includes(videoId)) {
         await Video.findByIdAndUpdate(
             videoId,
-            { $inc: { views: 1 } },
-            { new: true }
-        );
-
-        // Add the video to the user's watch history
-
-        // user?.watchHistory.push(videoId);
-        // await user.save({validateBeforeSave: false});
-        await User.findByIdAndUpdate(req.user?._id,
             {
-                $addToSet: {
-                    watchHistory: videoId
-                }
+
+                $inc: { views: 1 },
             },
             {
-                new: true
+                new : true
             }
+
         )
     }
 
-    // Retrieve the updated video details
-    const video = await Video.findById(videoId);
+    // adding video to watch history
+     await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $addToSet: {
+                watchHistory : videoId
+            }
+        },
+        {
+            new : true
+        }
+    )
+  
+   
+
+    const video = await Video.aggregate([
+        {
+            $match: {
+                _id : new mongoose.Types.ObjectId(videoId)
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "owner",
+                pipeline: [
+                    {
+                        $project: {
+                            username: 1,
+                            avatar: "$avatar.url",
+                            fullName: 1,
+                            _id: 1
+                        }
+
+                    }
+                ]
+            }
+        },
+
+        {
+
+            $addFields: {
+                owner: {
+                    $first: "$owner"
+                }
+            }
+        }
+    ])
     if (!video) throw new ApiError(500, "Video detail not found");
+    console.log("video :: ", video);
 
     return res.status(200).json(new ApiResponse(200, video, "Fetched video successfully"));
 });
@@ -322,8 +362,30 @@ const deleteVideo = asyncHandler(async (req, res) => {
         await deleteOnCloudinary(oldVideoFile?.url, oldVideoFile?.publicId);
         await deleteOnCloudinary(oldThumbnail?.url, oldThumbnail?.publicId);
     } catch (error) {
-        throw new ApiError(500, error?.message || 'Server Error');
+        throw new ApiError(500, error?.message || 'Server Error while deleting video');
     }
+
+    // remove from users watch History
+    const users = await User.find({ watchHistory: videoId });
+    for (const user of users) {
+        await User.findByIdAndUpdate(user?._id,
+            
+            {
+                $pull: {
+                    watchHistory: videoId
+                }
+            },
+            
+            { new:true }
+            )
+        }
+    
+
+
+    // when user delete his video then comments of this video will also be deleted
+    await Comment.deleteMany({ video: videoId });
+
+    // todo when video delted liked documents also cleared
 
     return res.status(200)
         .json(new ApiResponse(201, {}, "Video Deleted Successfully"))

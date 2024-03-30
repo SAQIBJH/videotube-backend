@@ -426,6 +426,7 @@ const getUserWatchHistory = asyncHandler(async (req, res) => {
                 foreignField: "_id",
                 as: "watchHistory",
                 pipeline: [
+
                     {
                         $lookup: {
                             from: "users",
@@ -461,7 +462,9 @@ const getUserWatchHistory = asyncHandler(async (req, res) => {
        
         ]
     )
-    console.log("userwatch :: ", user[0].watchHistory)
+
+    if(!user?.length) throw new ApiError(404, "Watch History is empty")
+
     return res
         .status(200)
         .json(new ApiResponse(200, user[0].watchHistory, "success"))
