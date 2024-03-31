@@ -142,11 +142,9 @@ const updateComment = asyncHandler(async (req, res) => {
     const { commentId } = req.params;
     if (!isValidObjectId(commentId)) throw new ApiError(404, "Not found comment for this id")
 
-    const comment = await Comment.findById(commentId, { owner: 1 });
+    const comment = await Comment.findById(commentId, { _id: 1});
     if (!comment) throw new ApiError(404, "Not found comment for this id")
-    
-    if (comment?.owner?._id?.toString() !== req.user?._id?.toString()) throw new ApiError(401,
-        "U cant update because owner is different user");
+
     
     const { content } = req.body;
     if (content?.trim() === "") throw new ApiError(404, "content is required")
@@ -177,11 +175,8 @@ const deleteComment = asyncHandler(async (req, res) => {
     const { commentId } = req.params;
     if (!isValidObjectId(commentId)) throw new ApiError(404, "Not found comment for this id");
 
-    const comment = await Comment.findById(commentId, { owner: 1 });
+    const comment = await Comment.findById(commentId, { _id: 1 });
     if (!comment) throw new ApiError(404, "Not found comment for this id")
-    
-    if(comment?.owner?._id.toString() !== req.user?._id.toString()) throw new ApiError(401,
-        "U cant delete because owner is different user");
     
 
     const deletedComment = await Comment.findByIdAndDelete(

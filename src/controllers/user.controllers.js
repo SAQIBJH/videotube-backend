@@ -5,6 +5,7 @@ import { User } from '../models/user.model.js';
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from 'jsonwebtoken';
 import mongoose from "mongoose";
+import { verifyJWT } from './../middlewares/auth.middleware.js';
 
 const generateAccessandRefreshTokens = async (userId) => {
     try {
@@ -130,7 +131,8 @@ const logoutUser = asyncHandler(async (req, res) => {
         )
 });
 
-const refreshAccessToken = asyncHandler(async (req, res) => {
+const refreshAccessToken = asyncHandler(async (req, res, next) => {
+    console.log("incoming refresh token", req.cookies?.refreshToken);
     const incomingRefreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
     if (!incomingRefreshToken) throw new ApiError(401, "Invalid Refresh Token");
 
@@ -153,9 +155,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
             secure: true
         }
 
-
-        return res
-            .status(200)
+        res.status(200)
             .cookie("accessToken", accessToken, options)
             .cookie("refreshToken", refreshToken, options)
             .json(new ApiResponse(200,

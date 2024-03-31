@@ -273,8 +273,8 @@ const updateVideo = asyncHandler(async (req, res) => {
 
 
     if (!isValidObjectId(videoId)) throw new ApiError(400, "Invalid Video Id");
-    const oldVideo = await Video.findById(videoId, { thumbnail: 1, owner: 1 });
 
+    const oldVideo = await Video.findById(videoId, { thumbnail: 1});
     if (!oldVideo) throw new ApiError(404, "No Video Found");
 
     if (
@@ -285,7 +285,7 @@ const updateVideo = asyncHandler(async (req, res) => {
 
 
     // author of the video can update its own video
-    if (oldVideo?.owner?.toString() !== req.user?._id.toString()) throw new ApiError(401, "Unauthorized Request");
+    // if (oldVideo?.owner?.toString() !== req.user?._id.toString()) throw new ApiError(401, "Unauthorized Request");
 
     const updatedThumbnail = await uploadOnCloudinary(thumbnailLocalPath);
     if (!updatedThumbnail) throw new ApiError(500, "thumbnail not uploaded on cloudinary");
@@ -343,12 +343,12 @@ const deleteVideo = asyncHandler(async (req, res) => {
 
     if (!isValidObjectId(videoId)) throw new ApiError(400, "Invalid Video Id");
 
-    const video = await Video.findById(videoId, { owner: 1, videoFile: 1, thumbnail: 1 });
+    const video = await Video.findById(videoId, { videoFile: 1, thumbnail: 1 });
     // console.log("video :: ", video)
 
     if (!video) throw new ApiError(404, "No Video Found");
 
-    if (video?.owner?.toString() !== req.user?._id.toString()) throw new ApiError(401, "Unauthorized Request");
+    // if (video?.owner?.toString() !== req.user?._id.toString()) throw new ApiError(401, "Unauthorized Request");
 
     const oldVideoFile = video?.videoFile;
     const oldThumbnail = video?.thumbnail;
