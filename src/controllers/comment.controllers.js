@@ -33,6 +33,7 @@ const getComment = asyncHandler(async (req, res) => {
                     pipeline: [
                         {
                             $project: {
+                                _id:1,
                                 username: 1,
                                 avatar: "$avatar.url",
                                 
@@ -73,6 +74,7 @@ const getComment = asyncHandler(async (req, res) => {
         skip: (page - 1) * limit,
         limit: parseInt(limit),
     }
+    
     Comment.aggregatePaginate(
         commentAggregate,
         options

@@ -12,7 +12,7 @@ router.use(verifyJWT);
 router.route("/")
     .post(createTweet)
 
-router.route("/:username")
+router.route("/:userId")
     .get(getAllTweets)
 
 router.route("/:tweetId")

@@ -32,11 +32,13 @@ const createTweet = asyncHandler(async (req, res) => {
 })
 
 const getAllTweets = asyncHandler(async (req,res) => {
-    const { username } = req.params;
-    const { page = 1, limit = 10 } = req.query;
-    if (!username) throw new ApiError(404, "username is required");
+    const { userId } = req.params;
+    if (!userId) throw new ApiError(404, "userId is required");
+    if (!isValidObjectId(userId)) throw new ApiError(404, "UserId not valid");
     
-    const user = await User.findOne({ username }).select("_id");
+    const { page = 1, limit = 10 } = req.query;
+    
+    const user = await User.findById(userId).select("_id");
     if (!user) throw new ApiError(404, "User not found");
 
     const tweetAggregate = Tweet.aggregate([
