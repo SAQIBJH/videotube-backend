@@ -10,6 +10,7 @@ router.use(verifyJWT);
 router.route('/:videoId')
     .get(getComment)
     .post(addComment)
+    
 
 router.route('/c/:commentId')
     .all(checkOwner('commentId', Comment))

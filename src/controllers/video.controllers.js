@@ -6,6 +6,7 @@ import { deleteOnCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js";
 import mongoose, { isValidObjectId } from "mongoose";
 import { User } from "../models/user.model.js";
 import { Comment } from "../models/comment.model.js";
+import { Playlist } from "../models/playlist.model.js";
 
 
 const getAllVideos = asyncHandler(async (req, res) => {
@@ -193,76 +194,68 @@ const getVideoById = asyncHandler(async (req, res) => {
                     $first: "$owner"
                 }
             }
-        }
+        },
     ])
     if (!video) throw new ApiError(500, "Video detail not found");
-    console.log("video :: ", video);
-
-    return res.status(200).json(new ApiResponse(200, video, "Fetched video successfully"));
+    return res.status(200).json(new ApiResponse(200,
+        {
+          ...video[0],
+                  videoFile: video[0].videoFile?.url, // Only send the URL of the video file
+                  thumbnail: video[0].thumbnail?.url 
+       },
+        
+        "Fetched video successfully"));
 });
 
 
 const publishAVideo = asyncHandler(async (req, res) => {
+
     const { title, description } = req.body;
-    if ([title, description].some(field => field?.trim() === "")) throw new ApiError(404, "Please provide title and description");
+    var videoFile;
+    var thumbnail;
+  try {
+      if(!(title && description) || !(title?.trim() && description?.trim())) throw new ApiError(404, "Please provide title and description");
+  
+      if (!req.files?.videoFile?.[0]?.path && !req.files?.thumbnail?.[0]?.path) throw new ApiError(404, "Please provide video and thumbnail");
 
-    const videoLocalPath = req.files?.videoFile?.[0]?.path;
-    const thumbnailLocalPath = req.files?.thumbnail?.[0]?.path;
+  
+       [videoFile, thumbnail] = await Promise.all(
+          [
+          uploadOnCloudinary(req.files?.videoFile?.[0]?.path),
+          uploadOnCloudinary(req.files?.thumbnail?.[0]?.path)
+          ]
+      );
+  
+      const video = await Video.create({
+          title,
+          description,
+          videoFile: { publicId: videoFile?.public_id, url: videoFile?.url },
+          thumbnail: { publicId: thumbnail?.public_id, url: thumbnail?.url },
+          owner: req.user?._id,
+          duration: videoFile?.duration
+      })
+      return res.status(201)
+          .json(new ApiResponse(201,
+              {
+                  ...video._doc,
+                  videoFile: videoFile?.url, // Only send the URL of the video file
+                  thumbnail: thumbnail?.url    // Only send the URL of the thumbnail
+              },
+              "Video Published Successfully"
+          ))
+  } catch (error) {
+      try {
+        if(videoFile?.url) await deleteOnCloudinary(videoFile?.url, videoFile?.public_id);
+        if (thumbnail?.url) await deleteOnCloudinary(thumbnail?.url, thumbnail?.public_id);
 
-    // console.log(req.files)
-
-    if (!(videoLocalPath || thumbnailLocalPath)) throw new ApiError(404, "Please provide video and thumbnail");
-
-    const videoFile = await uploadOnCloudinary(videoLocalPath);
-    const thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
-    // console.log("videoFile ::", videoFile)
-
-
-    if (!(videoFile || thumbnail)) throw new ApiError(500, "video and thumbnail not uploaded successfully");
-
-
-    // const videoDuration = videoFile.duration;
-    // in frontend we will use this functionality to get video duration;
-    //     function secondsToHMS(seconds) {
-    //     var hours = Math.floor(seconds / 3600);
-    //     var minutes = Math.floor((seconds % 3600) / 60);
-    //     var remainingSeconds = seconds % 60;
-    //     return { hours: hours, minutes: minutes, seconds: remainingSeconds };
-    // }
-
-    // var durationSeconds = 3609;
-    // var duration = secondsToHMS(durationSeconds);
-    // console.log(duration.hours + " hours, " + duration.minutes + " minutes, " + duration.seconds + " seconds");
-
-
-
-
-    const video = await Video.create({
-        title,
-        description,
-        videoFile: { publicId: videoFile?.public_id, url: videoFile?.url },
-        thumbnail: { publicId: thumbnail?.public_id, url: thumbnail?.url },
-        owner: req.user?._id,
-        duration: videoFile?.duration
-    })
-    if (!video) {
-        await deleteOnCloudinary(videoFile?.url, videoFile?.public_id);
-        await deleteOnCloudinary(thumbnail?.url, thumbnail?.public_id);
-        throw new ApiError(500, "server Error")
-    }
-
-    // console.log("video ::  ", video)
-
-
-    return res.status(201)
-        .json(new ApiResponse(201,
-            {
-                ...video._doc,
-                videoFile: videoFile?.url, // Only send the URL of the video file
-                thumbnail: thumbnail?.url    // Only send the URL of the thumbnail
-            },
-            "Video Published Successfully"
-        ))
+      } catch (error) {
+          console.error("Error while deleting video :: ", error);
+          throw new ApiError(500, error?.message || 'Server Error while deleting video from cloudinary');
+      }
+      console.error("Error while publishing video :: ", error);
+      throw new ApiError(500, error?.message || 'Server Error while uploading video');
+    
+  }
 
 })
 
@@ -339,59 +332,60 @@ const updateVideo = asyncHandler(async (req, res) => {
 
 })
 
+
 const deleteVideo = asyncHandler(async (req, res) => {
-    const { videoId } = req.params;
-
-    if (!isValidObjectId(videoId)) throw new ApiError(400, "Invalid Video Id");
-
-    const video = await Video.findById(videoId, { videoFile: 1, thumbnail: 1 });
-    // console.log("video :: ", video)
+  const { videoId } = req.params;
+    var deleteVideoFilePromise;
+    var deleteThumbnailPromise;
+  try {
+    // 1. Validate videoId and fetch video details (optimized query)
+    const video = await Video.findById(videoId, { videoFile: 1, thumbnail: 1 })
+      .select('_id videoFile thumbnail'); // Use aggregation pipeline for efficiency
 
     if (!video) throw new ApiError(404, "No Video Found");
 
-    // if (video?.owner?.toString() !== req.user?._id.toString()) throw new ApiError(401, "Unauthorized Request");
+    // 2. Delete video file and thumbnail from Cloudinary (concurrent calls)
+    [deleteVideoFilePromise, deleteThumbnailPromise] = await Promise.all([
+      deleteOnCloudinary(video.videoFile.url, video.videoFile.publicId),
+      deleteOnCloudinary(video.thumbnail.url, video.thumbnail.publicId)
+    ]);
 
-    const oldVideoFile = video?.videoFile;
-    const oldThumbnail = video?.thumbnail;
+    // 3. Delete video from database
+    await Video.findByIdAndDelete(videoId);
 
-    if (!(oldVideoFile || oldThumbnail)) throw new ApiError(500, "Something went wrong while deleting video");
+      // 4. Remove video from related collections (optimized updates)
+         const updatePromises = [
+      User.updateMany({ watchHistory: videoId }, { $pull: { watchHistory: videoId } }),
+      Comment.deleteMany({ video: videoId }),
+      Playlist.updateMany({ videos: videoId }, { $pull: { videos: videoId } })
+    ];
 
-    const deletedVideo = await Video.findByIdAndDelete(videoId);
-    if (!deletedVideo) throw new ApiError(500, "Something went wrong while deleting video");
+      await Promise.all(updatePromises);
+      
 
+    // 5. Handle any remaining tasks (e.g., removing likes)
+    // ...
+
+    return res.status(200).json(new ApiResponse(201, {}, "Video Deleted Successfully"));
+
+  } catch (error) {
+    console.error("Error while deleting video:", error);
+
+    // Rollback Cloudinary actions if necessary
     try {
-        await deleteOnCloudinary(oldVideoFile?.url, oldVideoFile?.publicId);
-        await deleteOnCloudinary(oldThumbnail?.url, oldThumbnail?.publicId);
-    } catch (error) {
-        throw new ApiError(500, error?.message || 'Server Error while deleting video');
+      if (deleteVideoFilePromise?.error) await deleteVideoFilePromise.retry(); // Attempt retry
+      if (deleteThumbnailPromise?.error) await deleteThumbnailPromise.retry();
+    } catch (cloudinaryError) {
+      console.error("Failed to rollback Cloudinary deletions:", cloudinaryError);
     }
 
-    // remove from users watch History
-    const users = await User.find({ watchHistory: videoId });
-    for (const user of users) {
-        await User.findByIdAndUpdate(user?._id,
-            
-            {
-                $pull: {
-                    watchHistory: videoId
-                }
-            },
-            
-            { new:true }
-            )
-        }
-    
+    throw new ApiError(500, error.message || 'Server Error while deleting video');
+  }
+});
 
 
-    // when user delete his video then comments of this video will also be deleted
-    await Comment.deleteMany({ video: videoId });
 
-    // todo when video delted liked documents also cleared
 
-    return res.status(200)
-        .json(new ApiResponse(201, {}, "Video Deleted Successfully"))
-
-})
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
     const { videoId } = req.params

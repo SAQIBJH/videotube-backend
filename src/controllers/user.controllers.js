@@ -426,6 +426,13 @@ const getUserWatchHistory = asyncHandler(async (req, res) => {
                 foreignField: "_id",
                 as: "watchHistory",
                 pipeline: [
+                    {
+                        $match: {
+                            delted: {
+                                $ne: true
+                            }
+                        }
+                },
 
                     {
                         $lookup: {

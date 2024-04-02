@@ -32,13 +32,14 @@ const createPlaylist = asyncHandler(async (req, res) => {
 
 const getPlaylistById = asyncHandler(async (req, res) => {
     const { playlistId } = req.params;
+    console.log("playlistId", playlistId)
     if (!isValidObjectId(playlistId)) throw new ApiError(401, "Invalid playlist Id");
 
     const playlist = await Playlist.findById(playlistId);
     if (!playlist) throw new ApiError(404, "playlist not found");
 
-
-    const playlistAggregate = await Playlist.aggregate([
+    const playlistAggregate = await Playlist.aggregate(
+        [
         {
             $match: {
                 _id: new mongoose.Types.ObjectId(playlistId)
@@ -51,6 +52,12 @@ const getPlaylistById = asyncHandler(async (req, res) => {
                 foreignField: "_id",
                 as: "videos",
                 pipeline: [
+                    {
+                        
+                        $match: { deleted: { $ne: true } } // Filter out deleted videos
+
+                    },
+
                     {
                         $lookup: {
                             from: "users",
@@ -73,12 +80,12 @@ const getPlaylistById = asyncHandler(async (req, res) => {
                         $addFields: {
                             videoOwner: {
                                 $first: "$owner"
-                           }
+                            }
                         }
                     },
                     {
                         $project: {
-                            owner : 0
+                            owner: 0
                         }
                     }
                 ]
@@ -110,14 +117,18 @@ const getPlaylistById = asyncHandler(async (req, res) => {
                 }
             }
         }
-       
 
-    ])
+
+        ]
+    )
+
+
+    if (!playlistAggregate) throw new ApiError(404, "playlist not found");
 
     return res.status(200)
         .json(new ApiResponse(
             201,
-            playlistAggregate[0],
+            playlistAggregate,
             "Playlist fetched successfully"
         ))
 
@@ -271,6 +282,13 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
                 as: "videos",
                 pipeline: [
                     {
+                        $match: {
+                            deleted: {
+                            $ne : true
+                        }
+                    }
+                },
+                    {
                         $lookup: {
                             from: "users",
                             localField: "owner",
@@ -293,6 +311,16 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
                             videoOwner: {
                                 $first: "$owner"
                             }
+                        }
+                    },
+                    {
+                        $project: {
+                            owner: 0,
+                        }
+                    },
+                    {
+                        $sort: {
+                            createdAt: -1
                         }
                     }
                 ]
@@ -324,7 +352,7 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
             }
         }
 
-    
+
     ])
 
     if (!playlistAggregate) throw new ApiError(404, "Playlist not found");
