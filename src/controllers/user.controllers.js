@@ -45,12 +45,19 @@ const registerUser = asyncHandler(async (req, res) => {
     if (!avatarLocalPath) throw new ApiError(400, "Avatar Image is required")
 
 
-
-    // upload on cloudinary from backend
-    const avatar = await uploadOnCloudinary(avatarLocalPath);
-    const coverImage = await uploadOnCloudinary(coverImageLocalPath);
-    // create a new user and save
-
+    var avatar;
+    var coverImage;
+   try {
+      [avatar,coverImage] = await Promise.all(
+         [
+             await uploadOnCloudinary(avatarLocalPath),
+             await uploadOnCloudinary(coverImageLocalPath)
+         ]
+     )
+   } catch (error) {
+       console.error("Error while uploading image :: ", error);
+       throw new ApiError(500, error?.message || 'Server Error while uploading image to cloudinary');
+   }
     const createdUser = await User.create({
         fullName,
         username: username.toLowerCase(),
@@ -61,7 +68,7 @@ const registerUser = asyncHandler(async (req, res) => {
     })
 
 
-    if (!createdUser) throw new ApiError(500, 'Server Error');
+    if (!createdUser) throw new ApiError(500, error?.message ||'Server Error while creating account');
 
     // returning response
     return res.status(201).json(new ApiResponse(200, createdUser, "User Registered Successfully")
