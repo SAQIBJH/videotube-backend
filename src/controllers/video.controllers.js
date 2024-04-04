@@ -7,6 +7,7 @@ import mongoose, { isValidObjectId } from "mongoose";
 import { User } from "../models/user.model.js";
 import { Comment } from "../models/comment.model.js";
 import { Playlist } from "../models/playlist.model.js";
+import { Subscription } from "../models/subscription.model.js";
 
 
 const getAllVideos = asyncHandler(async (req, res) => {
@@ -234,6 +235,12 @@ const publishAVideo = asyncHandler(async (req, res) => {
           owner: req.user?._id,
           duration: videoFile?.duration
       })
+
+     
+      
+
+
+
       return res.status(201)
           .json(new ApiResponse(201,
               {

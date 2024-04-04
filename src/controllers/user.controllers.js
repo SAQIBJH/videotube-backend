@@ -6,6 +6,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from 'jsonwebtoken';
 import mongoose from "mongoose";
 import { verifyJWT } from './../middlewares/auth.middleware.js';
+import { Subscription } from "../models/subscription.model.js";
 
 const generateAccessandRefreshTokens = async (userId) => {
     try {
@@ -68,7 +69,8 @@ const registerUser = asyncHandler(async (req, res) => {
     })
 
 
-    if (!createdUser) throw new ApiError(500, error?.message ||'Server Error while creating account');
+    if (!createdUser) throw new ApiError(500, error?.message || 'Server Error while creating account');
+
 
     // returning response
     return res.status(201).json(new ApiResponse(200, createdUser, "User Registered Successfully")
@@ -345,7 +347,8 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     const { username } = req.params;
     console.log(username)
     if (!username?.trim()) throw new ApiError(404, "User or channel not found");
-    const channel = await User.aggregate([
+    const channel = await User.aggregate(
+        [
         {
             $match: {
                 username: username.toLowerCase()
@@ -403,9 +406,10 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
 
             }
         }
-    ])
+        ]
+    )
 
-    console.log("channel :: ", channel);
+    // console.log("channel :: ", channel);
     if (!channel?.length) throw new ApiError("404", "channel doesn't exist");
     return res
         .status(200)
