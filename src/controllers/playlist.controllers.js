@@ -40,88 +40,100 @@ const getPlaylistById = asyncHandler(async (req, res) => {
 
     const playlistAggregate = await Playlist.aggregate(
         [
-        {
-            $match: {
-                _id: new mongoose.Types.ObjectId(playlistId)
-            }
-        },
-        {
-            $lookup: {
-                from: "videos",
-                localField: "videos",
-                foreignField: "_id",
-                as: "videos",
-                pipeline: [
-                    {
-                        
-                        $match: { deleted: { $ne: true } } // Filter out deleted videos
+            {
+                $match: {
+                    _id: new mongoose.Types.ObjectId(playlistId)
+                }
+            },
+            {
+                $lookup: {
+                    from: "videos",
+                    localField: "videos",
+                    foreignField: "_id",
+                    as: "videos",
+                    pipeline: [
+                        {
 
-                    },
+                            $match: { deleted: { $ne: true } } // Filter out deleted videos
 
-                    {
-                        $lookup: {
-                            from: "users",
-                            localField: "owner",
-                            foreignField: "_id",
-                            as: "owner",
-                            pipeline: [
-                                {
-                                    $project: {
-                                        fullName: 1,
-                                        _id: 1,
-                                        avatar: "$avatar.url",
-                                        username: 1
-                                    },
+                        },
+
+                        {
+                            $lookup: {
+                                from: "users",
+                                localField: "owner",
+                                foreignField: "_id",
+                                as: "owner",
+                                pipeline: [
+                                    {
+                                        $project: {
+                                            fullName: 1,
+                                            _id: 1,
+                                            avatar: "$avatar.url",
+                                            username: 1
+                                        },
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            $addFields: {
+                                videoOwner: {
+                                    $first: "$owner"
                                 }
-                            ]
-                        }
-                    },
-                    {
-                        $addFields: {
-                            videoOwner: {
-                                $first: "$owner"
+                            }
+                        },
+                        {
+                            $project: {
+                                owner: 0
+                            }
+                        },
+
+                        {
+                            $addFields: {
+                                videoFile : "$videoFile.url",
+                            }
+                        },
+
+                        {
+                            $addFields: {
+                                thumbnail: "$thumbnail.url"
                             }
                         }
-                    },
-                    {
-                        $project: {
-                            owner: 0
-                        }
-                    }
-                ]
-            }
-        },
+                    
+                    ]
+                }
+            },
 
-        {
-            $lookup: {
-                from: "users",
-                localField: "owner",
-                foreignField: "_id",
-                as: "owner",
-                pipeline: [
-                    {
-                        $project: {
-                            fullName: 1,
-                            _id: 1,
-                            avatar: "$avatar.url",
-                            username: 1
-                        },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "owner",
+                    foreignField: "_id",
+                    as: "owner",
+                    pipeline: [
+                        {
+                            $project: {
+                                fullName: 1,
+                                _id: 1,
+                                avatar: "$avatar.url",
+                                username: 1
+                            },
+                        }
+                    ]
+                }
+            },
+
+            {
+                $addFields: {
+                    owner: {
+                        $first: "$owner"
                     }
-                ]
-            }
-        },
-        {
-            $addFields: {
-                owner: {
-                    $first: "$owner"
                 }
             }
-        }
-
 
         ]
     )
-
 
     if (!playlistAggregate) throw new ApiError(404, "playlist not found");
 
@@ -261,103 +273,80 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
 const getUserPlaylists = asyncHandler(async (req, res) => {
     const { userId } = req.params;
     if (!isValidObjectId(userId)) throw new ApiError(401, "Invalid user Id");
-    const user = await User.findById(userId);
-    if (!user) throw new ApiError(404, "User Not found");
 
     const playlist = await Playlist.findOne({ owner: userId });
     if (!playlist) throw new ApiError(404, "Playlist not found");
 
-    const playlistAggregate = await Playlist.aggregate([
-        {
-            $match: {
-                owner: new mongoose.Types.ObjectId(userId)
-
-            }
-        },
-        {
-            $lookup: {
-                from: "videos",
-                localField: "videos",
-                foreignField: "_id",
-                as: "videos",
-                pipeline: [
-                    {
-                        $match: {
-                            deleted: {
-                            $ne : true
-                        }
-                    }
+    const playlistAggregate = await Playlist.aggregate(
+        [
+            {
+                $match: {
+                    owner: new mongoose.Types.ObjectId(userId)
                 },
-                    {
-                        $lookup: {
-                            from: "users",
-                            localField: "owner",
-                            foreignField: "_id",
-                            as: "owner",
-                            pipeline: [
-                                {
-                                    $project: {
-                                        _id: 1,
-                                        fullName: 1,
-                                        username: 1,
-                                        avatar: "$avatar.url"
-                                    }
+            },
+            {
+                $lookup: {
+                    from: "videos",
+                    localField: "videos",
+                    foreignField: "_id",
+                    as: "videos",
+                    pipeline: [
+                        {
+                            $lookup: {
+                                from: "users",
+                                localField: "owner",
+                                foreignField: "_id",
+                                as: "owner",
+                                pipeline: [
+                                    {
+                                        $project: {
+                                            fullName: 1,
+                                            username: 1,
+                                            avatar: "$avatar.url",
+                                        },
+                                    },
+                                ],
+                            },
+                        },
+
+                        {
+                            $addFields: {
+                                videoOwner: {
+                                    $first: "$owner"
                                 }
-                            ]
-                        }
-                    },
-                    {
-                        $addFields: {
-                            videoOwner: {
-                                $first: "$owner"
-                            }
-                        }
-                    },
-                    {
-                        $project: {
-                            owner: 0,
-                        }
-                    },
-                    {
-                        $sort: {
-                            createdAt: -1
-                        }
-                    }
-                ]
-            }
-        },
-        {
-            $lookup: {
-                from: "users",
-                localField: "owner",
-                foreignField: "_id",
-                as: "owner",
-                pipeline: [
-                    {
-                        $project: {
-                            _id: 1,
-                            fullName: 1,
-                            username: 1,
-                            avatar: "$avatar.url"
-                        }
-                    }
-                ]
-            }
-        },
-        {
-            $addFields: {
-                owner: {
-                    $first: "$owner"
-                }
-            }
-        }
+                            },
+                        },
 
+                        {
+                            $unset: "owner"
+                        },
 
-    ])
+                        {
+                            $addFields: {
+                                videoFile: "$videoFile.url"
+                            },
+                        },
+
+                        {
+                            $addFields: {
+                                thumbnail: "$thumbnail.url"
+                            },
+                        },
+
+                    ]
+
+                },
+
+            },
+
+            {
+                $unwind: "$videos"
+            },
+        ]
+    )
 
     if (!playlistAggregate) throw new ApiError(404, "Playlist not found");
 
-    console.log("playlistAggregate :: ", playlistAggregate);
     return res.status(200)
         .json(
             new ApiResponse(

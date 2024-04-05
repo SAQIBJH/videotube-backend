@@ -19,7 +19,7 @@ const generateAccessandRefreshTokens = async (userId) => {
         // console.log("refreshh Tokenn ::", refreshToken);
         return { accessToken, refreshToken, user };
     } catch (error) {
-        throw new ApiError(500, error?.message ||"Something went wrong while  generating tokens");
+        throw new ApiError(500, error?.message || "Something went wrong while  generating tokens");
     }
 
 }
@@ -48,24 +48,24 @@ const registerUser = asyncHandler(async (req, res) => {
 
     var avatar;
     var coverImage;
-   try {
-      [avatar,coverImage] = await Promise.all(
-         [
-             await uploadOnCloudinary(avatarLocalPath),
-             await uploadOnCloudinary(coverImageLocalPath)
-         ]
-     )
-   } catch (error) {
-       console.error("Error while uploading image :: ", error);
-       throw new ApiError(500, error?.message || 'Server Error while uploading image to cloudinary');
-   }
+    try {
+        [avatar, coverImage] = await Promise.all(
+            [
+                await uploadOnCloudinary(avatarLocalPath),
+                await uploadOnCloudinary(coverImageLocalPath)
+            ]
+        )
+    } catch (error) {
+        console.error("Error while uploading image :: ", error);
+        throw new ApiError(500, error?.message || 'Server Error while uploading image to cloudinary');
+    }
     const createdUser = await User.create({
         fullName,
         username: username.toLowerCase(),
         password,
         email,
-        avatar: {publicId : avatar?.public_id, url: avatar?.url},
-        coverImage: {publicId : coverImage?.public_id, url: coverImage?.url || " "}
+        avatar: { publicId: avatar?.public_id, url: avatar?.url },
+        coverImage: { publicId: coverImage?.public_id, url: coverImage?.url || " " }
     })
 
 
@@ -233,8 +233,8 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 
 const updateUserAvatarImage = asyncHandler(async (req, res) => {
     const { publicId, url } = req?.user?.avatar;
-    if(!(publicId || url)) throw new ApiError(404, "Something went wrong while updating user avatar");
-  
+    if (!(publicId || url)) throw new ApiError(404, "Something went wrong while updating user avatar");
+
 
     const avatarImageLocalPath = req.file?.path; // for single file we use file not files
     if (!avatarImageLocalPath) throw new ApiError(400, "Please select an image to upload");
@@ -251,7 +251,7 @@ const updateUserAvatarImage = asyncHandler(async (req, res) => {
                     publicId: avatar?.public_id,
                     url: avatar?.url
                 }
-                 
+
             }
         },
         {
@@ -268,7 +268,7 @@ const updateUserAvatarImage = asyncHandler(async (req, res) => {
     // console.log("url ::", url, "    publicId ::", publicId)
     if (url) {
         try {
-            await deleteOnCloudinary(url,publicId)
+            await deleteOnCloudinary(url, publicId)
         } catch (error) {
 
             console.log(`Failed to Delete Old Image From Cloudinary Server ${error}`);
@@ -286,7 +286,7 @@ const updateUserAvatarImage = asyncHandler(async (req, res) => {
 
 const updateUserCoverImage = asyncHandler(async (req, res) => {
     const { publicId, url } = req?.user?.coverImage;
-    if(!(publicId || url)) throw new ApiError(404, "Something went wrong while updating user avatar");
+    if (!(publicId || url)) throw new ApiError(404, "Something went wrong while updating user avatar");
 
     const coverImageLocalPath = req.file?.path;
     if (!coverImageLocalPath) throw new ApiError(
@@ -325,7 +325,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     // delete  the previous image from cloudinary server
     if (url) {
         try {
-            await deleteOnCloudinary(url,publicId)
+            await deleteOnCloudinary(url, publicId)
         } catch (error) {
 
             console.log(`Failed to Delete Old Image From Cloudinary Server ${error}`);
@@ -349,63 +349,63 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     if (!username?.trim()) throw new ApiError(404, "User or channel not found");
     const channel = await User.aggregate(
         [
-        {
-            $match: {
-                username: username.toLowerCase()
-            }
-        },
-        // stage 2 : get subscriber count
-
-        {
-            $lookup: {
-                from: "subscriptions",
-                localField: "_id",
-                foreignField: "channel",
-                as: "subscribers"
-            }
-        },
-        // stage 3 : get subscrib by channel
-        {
-            $lookup:
             {
-                from: "subscriptions",
-                localField: "_id",
-                foreignField: "subscriber",
-                as: "subscribedTo"
-            }
-        },
-        // stage  4 : add isSubscribe field to each document in the array
-        {
-            $addFields: {
-                subscriberCount: {
-                    $size: "$subscribers"
-                },
-                channelsSubscribedToCount: {
-                    $size: "$subscribedTo"
-                },
-                isSubscribe: {
-                    $cond: {
-                        if: { $in: [req.user?._id, "$subscribers.subscriber"] },
-                        then: true,
-                        else: false
+                $match: {
+                    username: username.toLowerCase()
+                }
+            },
+            // stage 2 : get subscriber count
+
+            {
+                $lookup: {
+                    from: "subscriptions",
+                    localField: "_id",
+                    foreignField: "channel",
+                    as: "subscribers"
+                }
+            },
+            // stage 3 : get subscrib by channel
+            {
+                $lookup:
+                {
+                    from: "subscriptions",
+                    localField: "_id",
+                    foreignField: "subscriber",
+                    as: "subscribedTo"
+                }
+            },
+            // stage  4 : add isSubscribe field to each document in the array
+            {
+                $addFields: {
+                    subscriberCount: {
+                        $size: "$subscribers"
+                    },
+                    channelsSubscribedToCount: {
+                        $size: "$subscribedTo"
+                    },
+                    isSubscribe: {
+                        $cond: {
+                            if: { $in: [req.user?._id, "$subscribers.subscriber"] },
+                            then: true,
+                            else: false
+                        }
                     }
                 }
-            }
-        },
-        // stage 4 : get thr projections data which we want to send from this document;
-        {
-            $project: {
-                fullName: 1,
-                username: 1,
-                email: 1,
-                isSubscribe: 1,
-                subscriberCount: 1,
-                channelsSubscribedToCount: 1,
-                avatar: "$avatar.url",
-                coverImage: "$coverImage.url"
+            },
+            // stage 4 : get thr projections data which we want to send from this document;
+            {
+                $project: {
+                    fullName: 1,
+                    username: 1,
+                    email: 1,
+                    isSubscribe: 1,
+                    subscriberCount: 1,
+                    channelsSubscribedToCount: 1,
+                    avatar: "$avatar.url",
+                    coverImage: "$coverImage.url"
 
+                }
             }
-        }
         ]
     )
 
@@ -421,67 +421,81 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
 const getUserWatchHistory = asyncHandler(async (req, res) => {
     const user = await User.aggregate(
         [
-        {
-            $match:
             {
-                _id: new mongoose.Types.ObjectId(req.user?._id)
-               
-            }
+                $match:
+                {
+                    _id: new mongoose.Types.ObjectId(req.user?._id)
 
-        },
+                }
 
-        {
-            $lookup: {
-                from: "videos",
-                localField: "watchHistory",
-                foreignField: "_id",
-                as: "watchHistory",
-                pipeline: [
-                    {
-                        $match: {
-                            delted: {
-                                $ne: true
-                            }
-                        }
-                },
+            },
 
-                    {
-                        $lookup: {
-                            from: "users",
-                            localField: "owner",
-                            foreignField: "_id",
-                            as: "owner",
-                            pipeline: [
-                                {
-                                    $project: {
-                                        fullName: 1,
-                                        avatar: "$avatar.url",
-                                        username: 1,
-                                    }
+            {
+                $lookup: {
+                    from: "videos",
+                    localField: "watchHistory",
+                    foreignField: "_id",
+                    as: "watchHistory",
+                    pipeline: [
+                        {
+                            $match: {
+                                delted: {
+                                    $ne: true
                                 }
-                            ]
-                        }
-                    },
-                    {
-                        $addFields: {
-                            owner: {
-                                $first: "$owner"
                             }
-                        }
-                    },
-                    {
-                        $sort: {
-                            "watchedAt": -1
                         },
-                    }
-                ]
+
+                        {
+                            $lookup: {
+                                from: "users",
+                                localField: "owner",
+                                foreignField: "_id",
+                                as: "owner",
+                                pipeline: [
+                                    {
+                                        $project: {
+                                            fullName: 1,
+                                            avatar: "$avatar.url",
+                                            username: 1,
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            $addFields: {
+                                owner: {
+                                    $first: "$owner"
+                                }
+                            }
+                        },
+                        {
+                            $addFields: {
+                                videoFile: "$videoFile.url",
+                            },
+                        },
+                        {
+                            $addFields: {
+                                thumbnail: "$thumbnail.url",
+                            },
+                        },
+
+
+                    ]
+                }
+            },
+
+
+            {
+                $sort: {
+                    "watchedAt": -1
+                },
             }
-        },
-       
+
         ]
     )
 
-    if(!user?.length) throw new ApiError(404, "Watch History is empty")
+    if (!user?.length) throw new ApiError(404, "Watch History is empty")
 
     return res
         .status(200)
@@ -504,7 +518,7 @@ export {
     updateUserCoverImage,
     getUserChannelProfile,
     getUserWatchHistory,
- 
+
 
 };
 

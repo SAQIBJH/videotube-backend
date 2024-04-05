@@ -18,61 +18,61 @@ const getUserSubscribedChannels = asyncHandler(async (req, res) => {
     const user = await User.findById(req.user?._id, { _id: 1 });
     if (!user) throw new ApiError(404, "User not found");
 
-    const pipeline = 
+    const pipeline =
         [
-        {
-            $match: {
-                channel: new mongoose.Types.ObjectId(channelId)
-            }
-        },
-        {
-            $lookup: {
-                from: "users",
-                localField: "subscriber",
-                foreignField: "_id",
-                as: "subscriber",
-                pipeline: [
-                    {
-                        $project: {
-                            fullName: 1,
-                            username: 1,
-                            avatar: "$avatar.url",
-                        },
-                    },
-                ],
+            {
+                $match: {
+                    channel: new mongoose.Types.ObjectId(channelId)
+                }
             },
-        },
-        {
-            $addFields: {
-                subscriber: {
-                    $first: "$subscriber",
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "subscriber",
+                    foreignField: "_id",
+                    as: "subscriber",
+                    pipeline: [
+                        {
+                            $project: {
+                                fullName: 1,
+                                username: 1,
+                                avatar: "$avatar.url",
+                            },
+                        },
+                    ],
                 },
             },
-        },
+            {
+                $addFields: {
+                    subscriber: {
+                        $first: "$subscriber",
+                    },
+                },
+            },
 
         ]
-    
 
-   try {
-       const subscribers = await Subscription.aggregate(pipeline);
-       const subscribersList = subscribers.map(item => item.subscriber)
-       return res.status(200)
-           .json(
-               new ApiResponse(
-                   200,
-                   subscribersList,
-                   "Subscribers List fetched successfully"
-               )
-        
-           )
-       
-   } catch (error) {
-       console.log("getUserSubscribedChannels error ::", error)
-       throw new ApiError(
-           500,
-           error?.message || "Internal server error in getUserSubscribedChannels"
-       )
-   }
+
+    try {
+        const subscribers = await Subscription.aggregate(pipeline);
+        const subscribersList = subscribers.map(item => item.subscriber)
+        return res.status(200)
+            .json(
+                new ApiResponse(
+                    200,
+                    subscribersList,
+                    "Subscribers List fetched successfully"
+                )
+
+            )
+
+    } catch (error) {
+        console.log("getUserSubscribedChannels error ::", error)
+        throw new ApiError(
+            500,
+            error?.message || "Internal server error in getUserSubscribedChannels"
+        )
+    }
 
 
 })
@@ -120,7 +120,7 @@ const getSubscribedChannelsByOwner = asyncHandler(async (req, res) => {
     if (!isValidObjectId(subscriberId)) throw new ApiError(401, "Invalid subscriber Id");
     if (!req.user?._id) throw new ApiError(401, "Unauthorized user");
 
-    const pipeline = 
+    const pipeline =
         [
             {
                 $match: {
@@ -145,39 +145,39 @@ const getSubscribedChannelsByOwner = asyncHandler(async (req, res) => {
                 },
             },
             {
-                $unwind : "$subscribedTo"
+                $unwind: "$subscribedTo"
             },
             {
                 $project: {
-                    
-                    subscribedChannel : "$subscribedTo"
+
+                    subscribedChannel: "$subscribedTo"
                 }
             }
-        ]   
+        ]
 
-        try {
-            const channelSubscribedTo = await Subscription.aggregate(pipeline);
-            const channelSubsByOwnerList = channelSubscribedTo.map(item => item.subscribedChannel)
+    try {
+        const channelSubscribedTo = await Subscription.aggregate(pipeline);
+        const channelSubsByOwnerList = channelSubscribedTo.map(item => item.subscribedChannel)
 
-            return res.status(200)
-                .json(
-                    new ApiResponse(
+        return res.status(200)
+            .json(
+                new ApiResponse(
                     200,
                     channelSubsByOwnerList,
                     "Channels Subscribed By owner fetched successfully"
-                    )
+                )
             )
-            
-        } catch (error) {
-            console.log("getSubscribedChannelsByOwner error ::", error)
-            throw new ApiError(
-                500,
-                error?.message || "Internal server error in getSubscribedChannelsByOwner"
-            )
-        }
-    
 
- 
+    } catch (error) {
+        console.log("getSubscribedChannelsByOwner error ::", error)
+        throw new ApiError(
+            500,
+            error?.message || "Internal server error in getSubscribedChannelsByOwner"
+        )
+    }
+
+
+
 
 })
 

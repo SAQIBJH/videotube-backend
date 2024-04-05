@@ -7,7 +7,7 @@ import mongoose, { isValidObjectId } from "mongoose";
 import { User } from "../models/user.model.js";
 import { Comment } from "../models/comment.model.js";
 import { Playlist } from "../models/playlist.model.js";
-import { Subscription } from "../models/subscription.model.js";
+import { Like } from "../models/like.model.js";
 
 
 const getAllVideos = asyncHandler(async (req, res) => {
@@ -161,7 +161,7 @@ const getVideoById = asyncHandler(async (req, res) => {
     )
   
    
-
+    
     const video = await Video.aggregate([
         {
             $match: {
@@ -196,16 +196,26 @@ const getVideoById = asyncHandler(async (req, res) => {
                 }
             }
         },
-    ])
-    if (!video) throw new ApiError(500, "Video detail not found");
-    return res.status(200).json(new ApiResponse(200,
         {
-          ...video[0],
-                  videoFile: video[0].videoFile?.url, // Only send the URL of the video file
-                  thumbnail: video[0].thumbnail?.url 
-       },
-        
-        "Fetched video successfully"));
+          $addFields: {
+            videoFile: "$videoFile.url",
+          },
+        },
+        {
+          $addFields: {
+            thumbnail: "$thumbnail.url",
+          },
+        },
+    ])
+    console.log("video :: ", video[0])
+    if (!video) throw new ApiError(500, "Video detail not found");
+    return res.status(200).json(
+        new ApiResponse(
+        200,
+        video[0],
+        "Fetched video successfully"
+        )
+    );
 });
 
 
@@ -265,6 +275,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
   }
 
 })
+
 
 const updateVideo = asyncHandler(async (req, res) => {
 
@@ -364,7 +375,8 @@ const deleteVideo = asyncHandler(async (req, res) => {
          const updatePromises = [
       User.updateMany({ watchHistory: videoId }, { $pull: { watchHistory: videoId } }),
       Comment.deleteMany({ video: videoId }),
-      Playlist.updateMany({ videos: videoId }, { $pull: { videos: videoId } })
+      Playlist.updateMany({ videos: videoId }, { $pull: { videos: videoId } }),
+      Like.deleteMany({ video: videoId })
     ];
 
       await Promise.all(updatePromises);
@@ -389,9 +401,6 @@ const deleteVideo = asyncHandler(async (req, res) => {
     throw new ApiError(500, error.message || 'Server Error while deleting video');
   }
 });
-
-
-
 
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
