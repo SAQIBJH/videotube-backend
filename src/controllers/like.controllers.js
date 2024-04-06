@@ -30,19 +30,25 @@ const toggleLike = async (Model, resourceId, userId) => {
         throw new ApiError(500, error?.message || "Internal server error in toggleLike")
     }
 
-    return { response, isLiked };
+    const totalLikes = await Like.countDocuments({ [resourceField]: resourceId });
+
+    return { response, isLiked, totalLikes };
 
 }
 
+
 const toggleVideoLike = asyncHandler(async (req, res) => {
     const { videoId } = req.params
-    const { response, isLiked } = await toggleLike(Video, videoId, req.user?._id);
+    const { response, isLiked, totalLikes } = await toggleLike(Video, videoId, req.user?._id);
+
+    // get total Likes on videos
+    
 
     return res.status(200)
         .json(
             new ApiResponse(
                 200,
-                response,
+                {response,totalLikes},
                 isLiked === null ? "Liked successfully" : "remove liked successfully"
             )
         )
@@ -51,30 +57,32 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
 
 });
 
+
 const toggleCommentLike = asyncHandler(async (req, res) => {
     const { commentId } = req.params;
-    const { response, isLiked } = await toggleLike(Comment, commentId, req.user?._id);
+    const { response, isLiked, totalLikes } = await toggleLike(Comment, commentId, req.user?._id);
     return res.status(200)
         .json(
             new ApiResponse(
                 200,
-                response,
+                {response,totalLikes},
                 isLiked === null ? "Liked successfully" : "remove liked successfully"
             )
         )
 
 })
+
 
 const toggleTweetLike = asyncHandler(async (req, res) => {
     const { tweetId } = req.params;
 
-    const { response, isLiked } = await toggleLike(Tweet, tweetId, req.user?._id);
+    const { response, isLiked, totalLikes } = await toggleLike(Tweet, tweetId, req.user?._id);
 
     return res.status(200)
         .json(
             new ApiResponse(
                 200,
-                response,
+                {response,totalLikes},
                 isLiked === null ? "Liked successfully" : "remove liked successfully"
             )
         )
@@ -82,6 +90,7 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
 
 
 })
+
 
 const getLikedVideos = asyncHandler(async (req, res) => {
     //TODO: get all liked videos
@@ -143,9 +152,6 @@ const getLikedVideos = asyncHandler(async (req, res) => {
             {
                 $unwind: "$video"
             },
-
-
-
 
             {
                 $replaceRoot: {

@@ -31,6 +31,7 @@ const createTweet = asyncHandler(async (req, res) => {
     
 })
 
+
 const getAllTweets = asyncHandler(async (req,res) => {
     const { userId } = req.params;
     if (!userId) throw new ApiError(404, "userId is required");
@@ -126,6 +127,7 @@ const getAllTweets = asyncHandler(async (req,res) => {
 
 })
 
+
 const updateTweet = asyncHandler(async (req,res) => {
     const { tweetId } = req.params;
     const { content } = req.body;
@@ -161,6 +163,7 @@ const updateTweet = asyncHandler(async (req,res) => {
             "tweet updated Successfully"
     ))
 })
+
 
 const deleteTweet = asyncHandler(async (req, res) => {
     const { tweetId } = req.params;

@@ -140,6 +140,7 @@ const addComment = asyncHandler(async (req, res) => {
 
 })
 
+
 const updateComment = asyncHandler(async (req, res) => {
     const { commentId } = req.params;
     if (!isValidObjectId(commentId)) throw new ApiError(404, "Not found comment for this id")
@@ -172,6 +173,7 @@ const updateComment = asyncHandler(async (req, res) => {
             "Comment Updated Successfully"
     ))
 })
+
 
 const deleteComment = asyncHandler(async (req, res) => {
     const { commentId } = req.params;

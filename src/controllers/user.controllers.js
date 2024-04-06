@@ -284,6 +284,7 @@ const updateUserAvatarImage = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, user, "Avatar Image Updated Successfully"))
 })
 
+
 const updateUserCoverImage = asyncHandler(async (req, res) => {
     const { publicId, url } = req?.user?.coverImage;
     if (!(publicId || url)) throw new ApiError(404, "Something went wrong while updating user avatar");
@@ -342,6 +343,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
             "cover Image uploaded Successfully")
         )
 })
+
 
 const getUserChannelProfile = asyncHandler(async (req, res) => {
     const { username } = req.params;
