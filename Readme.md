@@ -3,7 +3,6 @@ This is learning project for backend development.
 ## Table of Contents
 
 - [Description](#description)
-- [Table of Contents](#table-of-contents)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Usage](#usage)
@@ -109,6 +108,10 @@ This project is open source and it is based on learning, this project is from "C
 
 ## Tests
 This project uses Postman for testing its API endpoints. 
+here is a postman collection import in your postman collection and set the environment variables.
+variable : server  initialValue : http://localhost:5000/api/v1/  currentValue : http://localhost:5000/api/v1/
+
+import this file in postman collection.: https://drive.google.com/file/d/1eMLaP4i-cMVIgV4cTd1U0vse7-q136cf/view?usp=sharing 
 
 The tests cover the following areas:
 
