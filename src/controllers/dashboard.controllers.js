@@ -135,7 +135,7 @@ const getChannelStats = asyncHandler(async (req, res) => {
 
 })
 
-// with aggregation
+// with aggregation not correct right now I'm working on this
 // const getChannelStats = asyncHandler(async (req, res) => {
 //   if (!req.user?._id) throw new ApiError(404, "Unauthorized request");
 //   const userId = req.user?._id;
