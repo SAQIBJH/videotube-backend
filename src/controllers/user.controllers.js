@@ -5,8 +5,8 @@ import { User } from '../models/user.model.js';
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from 'jsonwebtoken';
 import mongoose from "mongoose";
-import { verifyJWT } from './../middlewares/auth.middleware.js';
-import { Subscription } from "../models/subscription.model.js";
+import fs from 'fs';
+import path from "path";
 
 const generateAccessandRefreshTokens = async (userId) => {
     try {
@@ -28,6 +28,9 @@ const registerUser = asyncHandler(async (req, res) => {
     // get all data from frontend which is send by post request
     const { fullName, username, password, email } = req.body;
 
+    // check user upload its image or not
+    const avatarLocalPath = await req.files?.avatar?.[0]?.path;
+    const coverImageLocalPath = await req.files?.coverImage?.[0]?.path;
 
     // checking if user provide all details correctly
     if ([fullName, username, password, email].some(field => field?.trim() === "")) throw new ApiError(400, "Please provide all fields");
@@ -35,16 +38,16 @@ const registerUser = asyncHandler(async (req, res) => {
 
     // checking if user Already exists
     const existingUser = await User.findOne({ $or: [{ username }, { email }] })
-    if (existingUser) throw new ApiError(409, "User already registered");
+    if (existingUser) {
+        fs.unlinkSync(path.resolve(avatarLocalPath)) // it uses absolute path
+        fs.unlinkSync(coverImageLocalPath) // it uses relative path bcz we already set public folder
 
-
-    // check user upload its image or not
-    const avatarLocalPath = await req.files?.avatar?.[0]?.path;
-    const coverImageLocalPath = await req.files?.coverImage?.[0]?.path;
+        throw new ApiError(409, "User already registered");
+    }
 
 
     if (!avatarLocalPath) throw new ApiError(400, "Avatar Image is required")
-
+    if (!coverImageLocalPath) throw new ApiError(400, "Cover Image is required")
 
     var avatar;
     var coverImage;
@@ -71,7 +74,6 @@ const registerUser = asyncHandler(async (req, res) => {
 
     if (!createdUser) throw new ApiError(500, error?.message || 'Server Error while creating account');
 
-
     // returning response
     return res.status(201).json(new ApiResponse(200, createdUser, "User Registered Successfully")
     )
@@ -92,11 +94,7 @@ const loginUser = asyncHandler(async (req, res) => {
     const isPasswordValid = await user.isPasswordCorrect(password)
     if (!isPasswordValid) throw new ApiError(400, "Invalid Password!");
     const { accessToken, refreshToken, user: loggedInUser } = await generateAccessandRefreshTokens(user._id);
-    // const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
-    // console.log("AccessTokenLogin", accessToken);
-
-    // console.log("user Login ::", user);
-
+   
     const options = {
         httpOnly: true,
         secure: true
