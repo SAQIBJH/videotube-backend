@@ -17,6 +17,7 @@ const generateAccessandRefreshTokens = async (userId) => {
         // console.log("user ::", user)
         await user.save({ validateBeforeSave: false })
         // console.log("refreshh Tokenn ::", refreshToken);
+        // console.log("access Tokenn ::", accessToken);
         return { accessToken, refreshToken, user };
     } catch (error) {
         throw new ApiError(500, error?.message || "Something went wrong while  generating tokens");

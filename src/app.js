@@ -15,7 +15,7 @@ app.use(cookieParser());
 
 
 
-// user import
+// import all router
 import userRouter from "./routes/user.routes.js"
 import videoRouter from "./routes/video.routes.js"
 import commentRouter from "./routes/comment.routes.js"
@@ -26,6 +26,8 @@ import subscriptionRouter from "./routes/subscription.routes.js"
 import likeRouter from "./routes/like.routes.js"
 import dashboardRouter from "./routes/dashboard.routes.js"
 import { ApiResponse } from "./utils/ApiResponse.js";
+
+
 
 app.use("/api/v1/healthcheck", healthcheckRouter);
 app.use("/api/v1/users", userRouter);

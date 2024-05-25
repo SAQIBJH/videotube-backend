@@ -12,7 +12,7 @@ const healthcheck = asyncHandler(async (req, res) => {
           timestamp: Date.now(),
           hrtime: process.hrtime(),
           serverStatus : `Server is running on port ${process.env.PORT}`
-      } 
+      }
       return res.status(200)
           .json(new ApiResponse(200,
               healthCheck,
@@ -26,7 +26,7 @@ const healthcheck = asyncHandler(async (req, res) => {
           timestamp: Date.now(),
           hrtime: process.hrtime(),
           error : error?.message
-      } 
+      }
       console.error("Error in health check:", error);
       return res.status(500)
           .json(
@@ -39,6 +39,9 @@ const healthcheck = asyncHandler(async (req, res) => {
   }
 
 })
+// const healthcheck = asyncHandler(async (req, res) => {
+//     res.json("hello")
+// })
 
 
 export {
